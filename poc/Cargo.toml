@@ -1,0 +1,13 @@
+[package]
+name = "stepcast-poc"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[dependencies]
+gif = "0.14"
+quantette = { version = "0.6", default-features = false, features = ["std", "threads"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-capture = "2.0"
