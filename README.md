@@ -4,30 +4,36 @@ Portable, offline Windows screen recorder that turns your actions into small GIF
 
 可攜、離線的 Windows 螢幕錄製工具：把操作錄成小巧的 GIF，自動標示點擊與按鍵，可拉近畫面、加標注。
 
-> 目前階段：**第 1 階段・Rust 驗證程式**（`poc/`）。驗證 Rust 截圖＋輸出 GIF 的效能與檔案大小，正式的 Tauri 介面之後加入。
+> 目前階段：**第一版介面**。可錄製主螢幕並輸出 GIF；縮放、標注、框選範圍等功能開發中。
 
-## 下載與試用
+## 下載與使用
 
-不需要安裝 Rust。每次推送後 GitHub Actions 會自動編譯：
+不需要安裝。每次推送後 GitHub Actions 會自動編譯：
 
-1. 打開本 repo 的 **Actions** 頁 → 最新一次 `build` → 下方 **Artifacts** 下載 `stepcast-poc-windows`
-2. 解壓縮後，在該資料夾開啟命令提示字元或 PowerShell：
+1. 打開本 repo 的 **Actions** 頁 → 最新一次 `build` → 下方 **Artifacts** 下載 `StepCast-windows`
+2. 解壓縮，雙擊 `StepCast.exe`
+3. 選好影格率、輸出寬度，按「開始錄製主螢幕」（或按 **F9**）
+4. 倒數 3 秒後開始錄製，視窗自動縮到工作列；再按 **F9** 停止
+5. 完成後會顯示預覽、檔案大小，並可「在資料夾中顯示」
+
+GIF 預設存在 `StepCast.exe` 旁的 `recordings` 資料夾；無法寫入時改存到「圖片\StepCast」。設定可在畫面上修改。
+
+需求：Windows 10 1903 以上，以及 WebView2（Windows 11 內建）。
+
+### 命令列版（驗證用）
 
 ```
 stepcast-poc.exe record --seconds 10 --fps 12 --width 960 --out test.gif
+stepcast-poc.exe selftest
 ```
 
-執行後 3 秒開始錄製主螢幕，結束時會顯示實際 FPS、寫入格數、編碼時間與檔案大小。
+## 專案結構
 
-| 參數 | 預設 | 說明 |
-| --- | --- | --- |
-| `--seconds` | 5 | 錄製秒數（1–600） |
-| `--fps` | 12 | 影格率（1–60） |
-| `--width` | 960 | 輸出寬度上限，高度等比例 |
-| `--out` | stepcast-test.gif | 輸出檔名 |
-| `--no-dither` | 關 | 關閉抖色；檔案通常更小，漸層會有色帶 |
-
-`stepcast-poc.exe selftest` 會用合成畫面測試編碼器，不需要螢幕。
+| 資料夾 | 內容 |
+| --- | --- |
+| `core/` | 截圖（Windows Graphics Capture）與 GIF 編碼，介面與命令列共用 |
+| `app/` | Tauri 2 + Svelte 介面 |
+| `poc/` | 命令列驗證程式 |
 
 ## 怎麼做到檔案小
 

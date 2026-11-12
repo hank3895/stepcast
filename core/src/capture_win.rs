@@ -25,7 +25,7 @@ pub struct Shared {
     pub max_width: u32,
 }
 
-struct Recorder {
+pub struct Recorder {
     shared: Shared,
     last_kept: Option<Instant>,
     scratch: Vec<u8>,
@@ -71,32 +71,53 @@ impl GraphicsCaptureApiHandler for Recorder {
     }
 }
 
+/// A running recording of the primary monitor. Call [`Session::stop`] to finish it.
+pub struct Session {
+    control: windows_capture::capture::CaptureControl<Recorder, BoxError>,
+    shared: Shared,
+}
+
+impl Session {
+    /// Starts recording the primary monitor at up to `fps`, scaled to at most `max_width`.
+    pub fn start(fps: u32, max_width: u32) -> Result<Self, String> {
+        let monitor = Monitor::primary().map_err(|e| format!("找不到主螢幕：{e}"))?;
+        let shared = Shared {
+            frames: Arc::new(Mutex::new(Vec::new())),
+            start: Instant::now(),
+            interval: Duration::from_millis(1000 / fps.max(1) as u64),
+            max_width,
+        };
+        let settings = Settings::new(
+            monitor,
+            CursorCaptureSettings::WithCursor,
+            DrawBorderSettings::WithoutBorder,
+            SecondaryWindowSettings::Default,
+            MinimumUpdateIntervalSettings::Default,
+            DirtyRegionSettings::Default,
+            ColorFormat::Rgba8,
+            shared.clone(),
+        );
+        let control = Recorder::start_free_threaded(settings).map_err(|e| format!("無法開始錄製：{e}"))?;
+        Ok(Self { control, shared })
+    }
+
+    /// Seconds since the recording started.
+    pub fn elapsed_secs(&self) -> f64 {
+        self.shared.start.elapsed().as_secs_f64()
+    }
+
+    /// Stops recording. Returns the frames and the recording length in ms.
+    pub fn stop(self) -> Result<(Vec<RgbFrame>, u64), String> {
+        let end_ms = self.shared.start.elapsed().as_millis() as u64;
+        self.control.stop().map_err(|e| format!("停止錄製失敗：{e}"))?;
+        let frames = std::mem::take(&mut *self.shared.frames.lock().map_err(|_| "frame list lock poisoned")?);
+        Ok((frames, end_ms))
+    }
+}
+
 /// Records the primary monitor for `seconds`. Returns the frames and the recording length in ms.
 pub fn record(seconds: u32, fps: u32, max_width: u32) -> Result<(Vec<RgbFrame>, u64), String> {
-    let monitor = Monitor::primary().map_err(|e| format!("找不到主螢幕：{e}"))?;
-    let shared = Shared {
-        frames: Arc::new(Mutex::new(Vec::new())),
-        start: Instant::now(),
-        interval: Duration::from_millis(1000 / fps.max(1) as u64),
-        max_width,
-    };
-
-    let settings = Settings::new(
-        monitor,
-        CursorCaptureSettings::WithCursor,
-        DrawBorderSettings::WithoutBorder,
-        SecondaryWindowSettings::Default,
-        MinimumUpdateIntervalSettings::Default,
-        DirtyRegionSettings::Default,
-        ColorFormat::Rgba8,
-        shared.clone(),
-    );
-
-    let control = Recorder::start_free_threaded(settings).map_err(|e| format!("無法開始錄製：{e}"))?;
+    let session = Session::start(fps, max_width)?;
     thread::sleep(Duration::from_secs(seconds as u64));
-    let end_ms = shared.start.elapsed().as_millis() as u64;
-    control.stop().map_err(|e| format!("停止錄製失敗：{e}"))?;
-
-    let frames = std::mem::take(&mut *shared.frames.lock().map_err(|_| "frame list lock poisoned")?);
-    Ok((frames, end_ms))
+    session.stop()
 }

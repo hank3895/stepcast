@@ -18,35 +18,52 @@ jobs:
       - uses: actions/checkout@v4
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
-          manifest-path: poc/Cargo.toml
           command: check licenses bans sources
 
   windows:
     name: Build Windows exe
     runs-on: windows-latest
-    defaults:
-      run:
-        working-directory: poc
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
         with:
-          workspaces: poc
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
       - name: Unit tests
-        run: cargo test --release
-      - name: Build
-        run: cargo build --release
+        run: cargo test --release -p stepcast-core
+      - name: Build CLI proof of concept
+        run: cargo build --release -p stepcast-poc
       - name: Self-test (encode a synthetic recording)
         run: target/release/stepcast-poc.exe selftest --out selftest.gif
+
+      - name: Build app (portable exe, frontend embedded)
+        working-directory: app
+        run: |
+          npm ci
+          npx tauri build --no-bundle
+
+      - name: Collect files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist-win | Out-Null
+          Copy-Item target/release/stepcast.exe dist-win/StepCast.exe
+          Copy-Item target/release/stepcast-poc.exe dist-win/
+          Copy-Item LICENSE dist-win/
+          Get-ChildItem dist-win | Format-Table Name, Length
+
       - uses: actions/upload-artifact@v4
         with:
-          name: stepcast-poc-windows
-          path: |
-            poc/target/release/stepcast-poc.exe
-            poc/selftest.gif
+          name: StepCast-windows
+          path: dist-win/
+
       - name: Release (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: poc/target/release/stepcast-poc.exe
+          files: |
+            dist-win/StepCast.exe
+            dist-win/stepcast-poc.exe

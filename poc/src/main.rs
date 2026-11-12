@@ -3,18 +3,15 @@
 //!   stepcast-poc record   [--seconds 5] [--fps 12] [--width 960] [--out stepcast-test.gif] [--no-dither]
 //!   stepcast-poc selftest [--out selftest.gif]
 
-mod encode;
-#[cfg_attr(not(windows), allow(dead_code))]
-mod scale;
-mod selftest;
 #[cfg(windows)]
-mod capture_win;
+use stepcast_core::capture_win;
+use stepcast_core::selftest;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::time::Instant;
 
-use encode::{encode_gif, EncodeOptions, EncodeStats};
+use stepcast_core::encode::{encode_gif, EncodeOptions, EncodeStats};
 
 struct Args {
     command: String,

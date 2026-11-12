@@ -6,8 +6,5 @@ license = "MIT"
 publish = false
 
 [dependencies]
+stepcast-core = { path = "../core" }
 gif = "0.14"
-quantette = { version = "0.6", default-features = false, features = ["std", "threads"] }
-
-[target.'cfg(windows)'.dependencies]
-windows-capture = "2.0"
