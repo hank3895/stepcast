@@ -1,0 +1,3 @@
+# Windows：靜態連結 C runtime，exe 單檔就能跑（免安裝 VC++ runtime）
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

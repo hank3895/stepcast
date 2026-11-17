@@ -1,0 +1,73 @@
+name: gifrec
+
+# 只有 gifrec/ 或這個檔案有變動時才跑，不影響 StepCast 主程式的 build.yml
+on:
+  push:
+    paths: ["gifrec/**", ".github/workflows/gifrec.yml"]
+  pull_request:
+    paths: ["gifrec/**", ".github/workflows/gifrec.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  licenses:
+    name: License check (cargo-deny)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: gifrec/Cargo.toml
+          command: check licenses bans sources
+
+  windows:
+    name: Build Windows exe
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: gifrec
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: gifrec
+
+      - name: Unit tests
+        run: cargo test --release
+
+      - name: Build (gifrec.exe + gifrec-gui.exe)
+        run: cargo build --release
+
+      - name: Smoke test
+        run: |
+          target/release/gifrec.exe --list
+          target/release/gifrec.exe --version
+
+      - name: Check exe has no VC++ runtime dependency
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $dumpbin = & $vswhere -latest -find "VC\Tools\MSVC\**\bin\Hostx64\x64\dumpbin.exe" | Select-Object -First 1
+          if (-not $dumpbin) { throw "找不到 dumpbin.exe" }
+          foreach ($exe in "target/release/gifrec.exe", "target/release/gifrec-gui.exe") {
+            $deps = & $dumpbin /dependents $exe | Select-String '\.dll'
+            Write-Host "$exe 相依 DLL："; $deps | ForEach-Object { Write-Host "  $($_.Line.Trim())" }
+            if ($deps -match 'VCRUNTIME|MSVCP') { throw "$exe 需要 VC++ runtime，不是可攜版" }
+          }
+
+      - name: Collect files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item target/release/gifrec.exe, target/release/gifrec-gui.exe dist/
+          Copy-Item ../LICENSE dist/
+          Copy-Item README.md dist/
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gifrec-windows
+          path: gifrec/dist/

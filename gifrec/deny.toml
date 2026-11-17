@@ -1,0 +1,29 @@
+# gifrec 的授權檢查。gifrec 以 MIT 授權發布，禁止 GPL / AGPL / LGPL 等強著作權相依。
+# 允許的都是寬鬆授權；另外兩項是 egui 內建後備字型（epaint_default_fonts）的授權：
+#   OFL-1.1、Ubuntu-font-1.0（允許隨程式一起散布）
+# 檢查實際發布的 Windows 版相依（預設只會看執行檢查的那台機器）
+[graph]
+targets = ["x86_64-pc-windows-msvc"]
+
+[licenses]
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "0BSD",
+  "Unicode-3.0",
+  "Unlicense",
+  "OFL-1.1",
+  "Ubuntu-font-1.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "allow"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

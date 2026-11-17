@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["core", "poc", "app/src-tauri"]
+exclude = ["gifrec"]
 
 [profile.release]
 opt-level = 3
