@@ -6,6 +6,7 @@
 #![cfg_attr(windows, windows_subsystem = "windows")] // Windows 雙擊時不跳出黑色主控台
 
 mod editor;
+mod project;
 mod render;
 
 use eframe::egui::{self, Color32, RichText};
@@ -117,7 +118,7 @@ impl Gui {
             Ok(ed) => {
                 self.editor = Some(ed);
                 self.open_error = None;
-                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(1150.0, 760.0)));
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(1280.0, 860.0)));
             }
             Err(e) => self.open_error = Some(e),
         }
@@ -347,7 +348,7 @@ impl eframe::App for Gui {
         // 把 GIF 拖進視窗 → 直接開啟編輯
         let dropped: Option<PathBuf> = ctx.input(|i| {
             i.raw.dropped_files.iter().map(|f| f.path().to_path_buf()).find(|p| {
-                p.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("gif"))
+                p.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("gif") || e.eq_ignore_ascii_case(project::EXT))
             })
         });
         if let Some(p) = dropped {
@@ -457,8 +458,8 @@ impl eframe::App for Gui {
                         if ui.add(big("● 開始錄影")).clicked() {
                             self.begin(&ctx);
                         }
-                        if ui.button("開啟 GIF 編輯…").on_hover_text("也可以直接把 GIF 拖進這個視窗").clicked() {
-                            if let Some(p) = rfd::FileDialog::new().add_filter("GIF", &["gif"]).set_directory(self.folder.trim()).pick_file() {
+                        if ui.button("開啟 GIF / 專案編輯…").on_hover_text("也可以直接把 GIF 或 .gifrec 專案拖進這個視窗").clicked() {
+                            if let Some(p) = rfd::FileDialog::new().add_filter("GIF 或專案", &["gif", project::EXT]).set_directory(self.folder.trim()).pick_file() {
                                 self.open_editor(&ctx, &p);
                             }
                         }
